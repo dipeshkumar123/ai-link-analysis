@@ -16,9 +16,9 @@ SSRF protections, and uses a structured-output LLM to return five business insig
 The API does **not** invent Google/Facebook/Instagram/LinkedIn/X search volumes. It
 returns `null`/no volume data and states this in the response warnings.
 
-**Live demo:** deployed URL is added here after the Vercel deployment.
+**Live demo:** https://ai-link-analysis-nine.vercel.app
+**Interactive docs:** https://ai-link-analysis-nine.vercel.app/docs
 **GitHub:** https://github.com/dipeshkumar123/ai-link-analysis
-**Interactive docs:** `/docs`
 
 ---
 
@@ -472,7 +472,7 @@ ai-link-analysis/
 - [x] Tests and lint passing
 - [x] README, samples and LLM research
 - [x] Docker and Vercel deployment files
-- [ ] Live demo URL added to README
+- [x] Live demo deployed at https://ai-link-analysis-nine.vercel.app
 - [ ] Submission email sent to `hr@chivoxai.com`
 - [ ] Dxora LinkedIn and CREST Instagram followed (manual step)
 
