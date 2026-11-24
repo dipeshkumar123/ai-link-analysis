@@ -20,6 +20,8 @@ returns `null`/no volume data and states this in the response warnings.
 **Interactive docs:** https://ai-link-analysis-nine.vercel.app/docs
 **GitHub:** https://github.com/dipeshkumar123/ai-link-analysis
 
+![Swagger UI](docs/swagger-ui.png)
+
 ---
 
 ## Quick start
