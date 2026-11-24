@@ -1,0 +1,86 @@
+AI-Powered Website Link Analysis API - sample run
+Date: 2026-11-23/24
+Environment: local Windows, Python 3.13, uvicorn on 127.0.0.1:4000
+Provider: Groq openai/gpt-oss-120b
+
+Request
+-------
+POST /link-analysis
+Content-Type: application/json
+
+{"url":"https://www.python.org/about/"}
+
+Response
+--------
+HTTP 200
+Content-Type: application/json
+X-Request-ID: generated per request
+X-Response-Time-Ms: ~8180
+
+success: true
+website: https://www.python.org/about/
+brand: Python.org
+
+extraction:
+  status_code: 200
+  title: About Python | Python.org
+  word_count: 318
+  content_chars: 2156
+  truncated: false
+  fetched_at: 2026-11-23T07:39:15Z
+
+analysis:
+  competitors: 3
+  target_search_queries: 5
+  top_services: 5
+  seo.recommended_title length: 56
+  seo.meta_description length: <= 155
+
+llm:
+  provider: groq
+  model: openai/gpt-oss-120b
+  input_tokens: 3495
+  output_tokens: 3093
+  total_tokens: 6588
+  estimated_cost_usd: 0.00238005
+  latency_ms: 7503
+  cached: false
+  fallback_used: false
+  repair_attempts: 0
+  token_usage_estimated: false
+
+warnings:
+  - The generated SEO title was trimmed to 60 characters.
+  - No explicit geographic focus was stated on the page; audience location was left blank.
+  - Competitor data is AI-generated. No Google, Facebook, Instagram, LinkedIn or X
+    search volume data is reported because no official search-volume API was used.
+
+Server log excerpt
+------------------
+INFO  app.services.cache | Analysis cache enabled at data\cache.sqlite3 (ttl=86400s)
+INFO  app.main | Starting AI Link Analysis API 1.0.0 environment=development llm=groq/openai/gpt-oss-120b
+INFO  app.services.analysis_service | Analysis complete request_id=... url=https://www.python.org/about/ words=318 provider=groq model=openai/gpt-oss-120b input_tokens=3495 output_tokens=3093 cost_usd=0.00238005 latency_ms=7503
+INFO  app.main | request method=POST path=/link-analysis status=200 duration_ms=8182 request_id=...
+
+Invalid URL check
+-----------------
+POST /link-analysis
+{"url":"http://127.0.0.1/admin"}
+
+HTTP 400
+{
+  "success": false,
+  "request_id": "5df79dfdc6e9416da5adc0188ec44c81",
+  "error": {
+    "code": "blocked_ip",
+    "message": "Private, loopback, link-local and reserved IP addresses are not allowed.",
+    "details": null
+  }
+}
+
+Notes
+-----
+- The local cache is SQLite and is disabled automatically when CACHE_ENABLED=false.
+- The production cache path is /tmp on Vercel because the filesystem is read-only
+  outside /tmp.
+- Secrets are read from .env and are not written to logs or committed to git.
