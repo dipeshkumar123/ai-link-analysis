@@ -28,6 +28,12 @@ token/cost metadata, warnings and a raw-JSON view.
 
 ![Analysis report rendered by the frontend](docs/frontend-report.png)
 
+*Live production rendering (post-fix):*  
+[![Live UI hero](docs/logs/live-ui.png)](https://ai-link-analysis-nine.vercel.app)  
+[![Live analysis report](docs/logs/live-ui-report.png)](https://ai-link-analysis-nine.vercel.app)
+
+The live report above ran on the primary model `openai/gpt-oss-120b` with no fallback and no repair attempts — confirming the validation-relaxation fix is in production.
+
 ---
 
 ## Quick start
