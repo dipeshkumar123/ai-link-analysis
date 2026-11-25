@@ -8,12 +8,13 @@ import time
 import uuid
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import Settings, get_settings
@@ -237,7 +238,38 @@ async def unexpected_error_handler(request: Request, exc: Exception) -> JSONResp
     return JSONResponse(status_code=500, content=payload.model_dump(mode="json"))
 
 
-@app.get("/", tags=["meta"], summary="Service information")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+def _frontend_html() -> str:
+    """Read the single-file frontend from disk (small file, cheap to read)."""
+    index_path = STATIC_DIR / "index.html"
+    try:
+        return index_path.read_text(encoding="utf-8")
+    except OSError:  # pragma: no cover - defensive for broken deployments
+        logger.warning("Frontend bundle missing at %s", index_path)
+        return (
+            "<!doctype html><html lang='en'><meta charset='utf-8'>"
+            "<title>LinkLens API</title>"
+            "<body style='background:#080b14;color:#e8eefb;font-family:system-ui;"
+            "padding:48px;line-height:1.6'>"
+            "<h1>LinkLens API</h1><p>The demo frontend could not be loaded, but the API is "
+            "running. Open <a style='color:#9fb4ff' href='/docs'>/docs</a> for the "
+            "interactive reference.</p></body></html>"
+        )
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def frontend() -> HTMLResponse:
+    """Serve the single-file demo UI.
+
+    The page is read from disk on each request, so it works on Vercel and locally
+    without a StaticFiles mount and without a restart after HTML edits.
+    """
+    return HTMLResponse(_frontend_html(), headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api", tags=["meta"], summary="Service information")
 async def root() -> dict:
     return {
         "name": settings.app_name,
@@ -245,6 +277,7 @@ async def root() -> dict:
         "description": "AI-powered website link analysis API",
         "docs": "/docs",
         "health": "/health",
+        "frontend": "/",
         "endpoint": "POST /link-analysis",
         "llm": {"provider": settings.llm_provider, "model": settings.llm_model},
     }

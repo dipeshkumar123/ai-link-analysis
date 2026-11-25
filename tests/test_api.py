@@ -226,5 +226,9 @@ def test_meta_endpoints(client) -> None:
     assert client.get("/openapi.json").status_code == 200
     health = client.get("/health").json()
     assert health["status"] == "ok"
-    root = client.get("/").json()
-    assert root["endpoint"] == "POST /link-analysis"
+    api = client.get("/api").json()
+    assert api["endpoint"] == "POST /link-analysis"
+    page = client.get("/")
+    assert page.status_code == 200
+    assert "text/html" in page.headers["content-type"]
+    assert "LinkLens" in page.text

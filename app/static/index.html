@@ -1,0 +1,1465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkLens — AI website intelligence</title>
+<meta name="description" content="Turn any public website into a growth brief: competitors, search queries, SEO improvements, services and target audience.">
+<meta name="theme-color" content="#06080f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23a5b8ff'/%3E%3Cstop offset='1' stop-color='%236ee7d0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%230b1020'/%3E%3Cpath d='M20 40V24m0 16h10M36 24v16m0-8h9' stroke='url(%23g)' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #06080f;
+    --panel: rgba(15, 21, 36, .78);
+    --panel-solid: #0d1322;
+    --line: rgba(255, 255, 255, .075);
+    --line-strong: rgba(255, 255, 255, .15);
+    --text: #eef2fb;
+    --muted: #97a4bc;
+    --faint: #6b7891;
+    --indigo: #93a9ff;
+    --mint: #5eead4;
+    --amber: #fbc27a;
+    --rose: #fb93a6;
+    --grad: linear-gradient(115deg, #b3c2ff 0%, #8fa8ff 38%, #6ee7d0 100%);
+    --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --serif: "Instrument Serif", Iowan Old Style, Georgia, serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(900px 520px at 12% -8%, rgba(112, 138, 255, .24), transparent 62%),
+      radial-gradient(820px 500px at 96% 2%, rgba(78, 226, 200, .16), transparent 60%),
+      radial-gradient(900px 700px at 50% 110%, rgba(120, 92, 255, .12), transparent 65%),
+      var(--bg);
+  }
+  .backdrop::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse 85% 55% at 50% 0%, #000 10%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 85% 55% at 50% 0%, #000 10%, transparent 78%);
+  }
+  .backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: .035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  a { color: inherit; text-decoration: none; }
+  input, button { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  ::selection { background: rgba(140, 165, 255, .32); }
+  :focus-visible { outline: 2px solid var(--indigo); outline-offset: 3px; border-radius: 6px; }
+
+  .wrap { width: min(1180px, calc(100% - 44px)); margin-inline: auto; }
+
+  /* ---------- header ---------- */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: blur(18px);
+    background: linear-gradient(180deg, rgba(6, 8, 15, .88), rgba(6, 8, 15, .55));
+    border-bottom: 1px solid rgba(255, 255, 255, .05);
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    min-height: 68px;
+  }
+  .brand { display: inline-flex; align-items: center; gap: 11px; }
+  .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: linear-gradient(160deg, rgba(147, 169, 255, .22), rgba(94, 234, 212, .1));
+    border: 1px solid rgba(255, 255, 255, .13);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 6px 20px -10px rgba(120, 150, 255, .8);
+  }
+  .brand-mark svg { width: 19px; height: 19px; }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-text strong { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .brand-text small {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .nav { display: flex; align-items: center; gap: 8px; }
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .025);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .status .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 0 3px rgba(251, 194, 122, .12);
+    transition: background .3s, box-shadow .3s;
+  }
+  .status.is-online .dot { background: var(--mint); box-shadow: 0 0 0 3px rgba(94, 234, 212, .12); }
+  .status.is-offline .dot { background: var(--rose); box-shadow: 0 0 0 3px rgba(251, 147, 166, .12); }
+  .nav-link {
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    color: var(--muted);
+    transition: color .2s, background .2s, border-color .2s;
+  }
+  .nav-link:hover { color: var(--text); background: rgba(255, 255, 255, .05); border-color: var(--line); }
+  .nav-link svg { width: 13px; height: 13px; vertical-align: -2px; margin-left: 5px; opacity: .7; }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 76px 0 18px; text-align: center; }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 13px 6px 7px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .03);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .eyebrow b {
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(147, 169, 255, .14);
+    border: 1px solid rgba(147, 169, 255, .25);
+    color: #c3d0ff;
+    font-weight: 500;
+  }
+  h1 {
+    margin: 26px auto 0;
+    max-width: 940px;
+    font-size: clamp(2.55rem, 6.4vw, 4.65rem);
+    line-height: 1.03;
+    letter-spacing: -.038em;
+    font-weight: 600;
+  }
+  h1 em {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -.01em;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    padding-right: .06em;
+  }
+  .lede {
+    max-width: 660px;
+    margin: 22px auto 0;
+    color: var(--muted);
+    font-size: 16.5px;
+    line-height: 1.65;
+    text-wrap: balance;
+  }
+
+  /* ---------- form ---------- */
+  .analyze { max-width: 760px; margin: 34px auto 0; }
+  .input-shell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 8px 8px 18px;
+    border-radius: 18px;
+    border: 1px solid var(--line-strong);
+    background: linear-gradient(180deg, rgba(22, 30, 50, .92), rgba(13, 19, 34, .92));
+    box-shadow: 0 24px 60px -30px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .06);
+    transition: border-color .25s, box-shadow .25s, transform .25s;
+  }
+  .input-shell:focus-within {
+    border-color: rgba(147, 169, 255, .55);
+    box-shadow: 0 0 0 4px rgba(117, 143, 255, .12), 0 28px 70px -34px rgba(90, 120, 255, .6);
+  }
+  .input-shell > svg { width: 19px; height: 19px; color: var(--faint); flex: 0 0 auto; }
+  .input-shell input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 15px 2px;
+    border: 0;
+    background: transparent;
+    font-size: 16px;
+    letter-spacing: -.005em;
+  }
+  .input-shell input::placeholder { color: #66738c; }
+  .input-shell input:focus { outline: none; }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 15px 24px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--grad);
+    color: #061019;
+    font-weight: 600;
+    font-size: 14.5px;
+    letter-spacing: -.01em;
+    box-shadow: 0 10px 30px -12px rgba(120, 200, 235, .55);
+    transition: transform .2s, filter .2s, box-shadow .2s;
+    white-space: nowrap;
+  }
+  .btn-primary svg { width: 15px; height: 15px; }
+  .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 16px 36px -14px rgba(120, 200, 235, .7); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary[disabled] { opacity: .55; cursor: not-allowed; transform: none; filter: none; }
+
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 16px;
+    font-size: 12.5px;
+    color: var(--faint);
+  }
+  .example {
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .02);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .example:hover { color: var(--text); border-color: rgba(147, 169, 255, .4); background: rgba(147, 169, 255, .08); }
+  .fineprint {
+    margin: 20px 0 0;
+    font-size: 11.5px;
+    color: var(--faint);
+    font-family: var(--mono);
+    letter-spacing: .01em;
+  }
+  .fineprint span { color: #8e9cb5; }
+
+  /* ---------- intro feature grid ---------- */
+  .stage { padding: 46px 0 10px; }
+  .intro-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .feature {
+    padding: 18px 16px 16px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012));
+    transition: border-color .25s, transform .25s, background .25s;
+  }
+  .feature:hover { border-color: rgba(147, 169, 255, .28); transform: translateY(-2px); background: linear-gradient(180deg, rgba(147, 169, 255, .07), rgba(255, 255, 255, .012)); }
+  .feature svg { width: 17px; height: 17px; color: var(--indigo); }
+  .feature h3 { margin: 13px 0 4px; font-size: 13px; font-weight: 600; letter-spacing: -.005em; }
+  .feature p { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--faint); }
+
+  /* ---------- panels ---------- */
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(19, 26, 44, .82), rgba(11, 16, 29, .86));
+    box-shadow: 0 30px 70px -46px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(255, 255, 255, .045);
+  }
+  .panel-pad { padding: 22px; }
+
+  .loading-panel { display: grid; grid-template-columns: 1.05fr .95fr; gap: 26px; padding: 30px; align-items: center; }
+  .spinner {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, .09);
+    border-top-color: var(--indigo);
+    border-right-color: var(--mint);
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-copy { display: flex; align-items: center; gap: 16px; }
+  .loading-copy h2 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.015em; }
+  .loading-copy p { margin: 3px 0 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .elapsed { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+  .progress { grid-column: 1 / -1; height: 3px; border-radius: 99px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+  .progress i { display: block; width: 38%; height: 100%; border-radius: 99px; background: var(--grad); animation: slide 1.5s ease-in-out infinite; }
+  @keyframes slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(280%); } }
+  .steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+  .steps li {
+    display: flex; align-items: center; gap: 9px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .02em; color: var(--faint);
+    transition: color .3s;
+  }
+  .steps li::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .5; }
+  .steps li.active { color: #c9d5ff; }
+  .steps li.active::before { background: var(--mint); box-shadow: 0 0 0 3px rgba(94, 234, 212, .14); opacity: 1; }
+
+  .error-panel { padding: 26px; border-color: rgba(251, 147, 166, .28); background: linear-gradient(180deg, rgba(52, 22, 32, .55), rgba(14, 16, 26, .9)); }
+  .error-head { display: flex; align-items: center; gap: 12px; }
+  .error-head svg { width: 21px; height: 21px; color: var(--rose); flex: 0 0 auto; }
+  .error-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  .error-code { margin-left: auto; font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--rose); border: 1px solid rgba(251, 147, 166, .3); padding: 4px 9px; border-radius: 999px; }
+  .error-panel p { margin: 12px 0 0; color: #d9c2c9; font-size: 14px; }
+  .error-panel .hint { font-size: 12px; color: var(--faint); }
+
+  /* ---------- report ---------- */
+  .report { display: grid; gap: 14px; animation: rise .5s cubic-bezier(.2, .7, .3, 1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+  .summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 26px;
+    padding: 26px;
+  }
+  .brandline { display: flex; align-items: center; gap: 14px; }
+  .avatar {
+    display: grid; place-items: center;
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(150deg, rgba(147, 169, 255, .32), rgba(94, 234, 212, .18));
+    border: 1px solid rgba(255, 255, 255, .16);
+    font-size: 16px; font-weight: 600; letter-spacing: .02em; color: #f3f7ff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22);
+    flex: 0 0 auto;
+  }
+  .brandline h2 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.028em; line-height: 1.15; }
+  .brandline .cat { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+  .summary p.about { margin: 16px 0 0; font-size: 14px; line-height: 1.68; color: #c3cddf; }
+  .offerings { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: rgba(255, 255, 255, .03);
+    font-size: 11.5px; color: #b6c2d8; white-space: nowrap;
+  }
+  .chip.accent { border-color: rgba(147, 169, 255, .3); background: rgba(147, 169, 255, .1); color: #c8d4ff; }
+  .chip.mint { border-color: rgba(94, 234, 212, .28); background: rgba(94, 234, 212, .09); color: #b4f5e9; }
+  .chip.amber { border-color: rgba(251, 194, 122, .28); background: rgba(251, 194, 122, .08); color: #f8d9ae; }
+  .chip.rose { border-color: rgba(251, 147, 166, .3); background: rgba(251, 147, 166, .08); color: #ffc5ce; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; align-content: start; }
+  .stat {
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .022);
+  }
+  .stat small { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .stat b { display: block; margin-top: 5px; font-size: 15px; font-weight: 500; letter-spacing: -.01em; color: #e7edfa; }
+  .stat b em { font-style: normal; font-size: 11px; color: var(--faint); margin-left: 3px; }
+  .summary-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .site-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 11.5px; color: #a9b8d6;
+    border-bottom: 1px solid rgba(255, 255, 255, .18);
+    padding-bottom: 1px;
+  }
+  .site-link:hover { color: #fff; border-color: var(--indigo); }
+  .site-link svg { width: 11px; height: 11px; }
+
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .toolbar .spacer { flex: 1; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, .025);
+    font-size: 12px; color: var(--muted);
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--line-strong); background: rgba(255, 255, 255, .055); }
+  .btn-ghost svg { width: 13px; height: 13px; }
+  .btn-ghost.copied { color: var(--mint); border-color: rgba(94, 234, 212, .35); }
+
+  .notice {
+    display: flex; gap: 11px;
+    padding: 13px 15px;
+    border: 1px solid rgba(251, 194, 122, .22);
+    border-radius: 13px;
+    background: rgba(251, 194, 122, .055);
+    font-size: 12.5px; color: #d9c9ad;
+  }
+  .notice svg { width: 15px; height: 15px; color: var(--amber); flex: 0 0 auto; margin-top: 1px; }
+  .notice ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; }
+  .notice li { padding-left: 2px; }
+
+  .section { padding: 24px; }
+  .section-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .num {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+    color: var(--indigo); padding-top: 4px;
+  }
+  .section-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+  .section-head p { margin: 3px 0 0; font-size: 12px; color: var(--faint); }
+  .section-head .count { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--faint); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+
+  .comp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+  .comp-grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comp {
+    display: flex; flex-direction: column;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .022);
+  }
+  .comp-top { display: flex; align-items: baseline; gap: 8px; }
+  .comp-top .rank { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  .comp-top h3 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .conf { margin-left: auto; font-family: var(--mono); font-size: 8.5px; letter-spacing: .09em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--faint); }
+  .conf.high { color: #a9f0e4; border-color: rgba(94, 234, 212, .3); background: rgba(94, 234, 212, .07); }
+  .conf.medium { color: #cfd9ff; border-color: rgba(147, 169, 255, .3); background: rgba(147, 169, 255, .08); }
+  .comp p { margin: 9px 0 0; font-size: 12px; line-height: 1.6; color: #aab6cb; }
+  .comp dl { display: grid; grid-template-columns: 1fr; gap: 5px; margin: 12px 0 0; }
+  .comp dl div { font-size: 11.5px; }
+  .comp dt { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .comp dd { margin: 1px 0 0; color: #c3cddf; }
+  .comp .tone { margin-top: 11px; padding: 9px 10px; border-radius: 9px; font-size: 11.5px; line-height: 1.55; }
+  .tone-good { background: rgba(94, 234, 212, .06); border: 1px solid rgba(94, 234, 212, .16); color: #b8ecdf; }
+  .tone-warn { background: rgba(251, 194, 122, .06); border: 1px solid rgba(251, 194, 122, .16); color: #efd9b8; }
+  .tone-info { background: rgba(147, 169, 255, .07); border: 1px solid rgba(147, 169, 255, .17); color: #c9d4f8; }
+  .tone b { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 3px; opacity: .75; }
+
+  .landscape { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 14px; }
+  .landscape-block { padding: 14px 16px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255, 255, 255, .018); }
+  .landscape-block h4 { margin: 0 0 8px; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .landscape-block ul { margin: 0; padding-left: 15px; display: grid; gap: 4px; }
+  .landscape-block li { font-size: 12px; line-height: 1.55; color: #b3bfd4; }
+  .disclaimer { margin: 14px 0 0; font-size: 10.5px; line-height: 1.6; color: #77839a; display: flex; gap: 7px; }
+  .disclaimer svg { width: 12px; height: 12px; flex: 0 0 auto; margin-top: 2px; opacity: .8; }
+
+  /* queries */
+  .queries { display: grid; gap: 8px; }
+  .query {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 8px 22px;
+    padding: 13px 15px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .02);
+    transition: border-color .2s, background .2s;
+  }
+  .query:hover { border-color: rgba(147, 169, 255, .25); background: rgba(147, 169, 255, .04); }
+  .query .q { font-size: 13.5px; font-weight: 500; color: #e9eefb; letter-spacing: -.005em; }
+  .query .q .idx { font-family: var(--mono); font-size: 9.5px; color: var(--faint); margin-right: 8px; }
+  .query .platforms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+  .platform { font-family: var(--mono); font-size: 9px; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--faint); }
+  .platform.google { color: #c9d5ff; border-color: rgba(147, 169, 255, .28); }
+  .platform.linkedin { color: #b4d4ff; border-color: rgba(110, 168, 254, .28); }
+  .platform.instagram { color: #ffc3d8; border-color: rgba(251, 147, 166, .28); }
+  .platform.facebook { color: #bdd1ff; border-color: rgba(120, 150, 255, .25); }
+  .platform.x { color: #d8dee9; border-color: rgba(255, 255, 255, .2); }
+  .query .meta { font-size: 11.5px; line-height: 1.55; color: #9fabbf; }
+  .query .meta b { display: block; font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); font-weight: 400; margin-bottom: 1px; }
+  .query .meta + .meta { margin-top: 7px; }
+  .intent { display: inline-block; font-family: var(--mono); font-size: 9px; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; background: rgba(94, 234, 212, .08); border: 1px solid rgba(94, 234, 212, .18); color: #a9ecdf; margin-bottom: 5px; }
+
+  /* SEO */
+  .seo-top { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .seo-box { padding: 15px 16px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255, 255, 255, .02); }
+  .seo-box h4 { margin: 0; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+  .seo-box .value { margin: 8px 0 0; font-size: 14px; font-weight: 500; line-height: 1.45; color: #eef3ff; }
+  .seo-box .value.meta { font-size: 12.5px; font-weight: 400; color: #c2cddf; }
+  .seo-box .rationale { margin: 7px 0 0; font-size: 11px; line-height: 1.55; color: var(--faint); }
+  .meter { display: flex; align-items: center; gap: 9px; margin-top: 10px; }
+  .meter .bar { flex: 1; height: 3px; border-radius: 99px; background: rgba(255, 255, 255, .08); overflow: hidden; }
+  .meter .bar i { display: block; height: 100%; border-radius: 99px; background: var(--mint); }
+  .meter .bar i.over { background: var(--amber); }
+  .meter small { font-family: var(--mono); font-size: 9.5px; color: var(--faint); white-space: nowrap; }
+
+  .kw-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; margin-top: 14px; }
+  .kw-group h5 { margin: 0 0 7px; font-family: var(--mono); font-size: 9px; letter-spacing: .11em; text-transform: uppercase; color: var(--faint); }
+  .kw-group .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  .content-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 16px; }
+  .content-card { padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .018); }
+  .content-card .row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .content-card h5 { margin: 0; font-size: 12.5px; font-weight: 600; color: #e4ebf9; }
+  .content-card p { margin: 6px 0 0; font-size: 11.5px; line-height: 1.55; color: #9facbf; }
+  .prio { margin-left: auto; font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--faint); }
+  .prio.high { color: #ffc9d1; border-color: rgba(251, 147, 166, .3); background: rgba(251, 147, 166, .07); }
+  .prio.medium { color: #f6d9b2; border-color: rgba(251, 194, 122, .26); background: rgba(251, 194, 122, .06); }
+
+  .fixes { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+  .fixes li { display: flex; gap: 9px; font-size: 12.5px; line-height: 1.55; color: #b7c3d7; }
+  .fixes svg { width: 13px; height: 13px; color: var(--mint); flex: 0 0 auto; margin-top: 2px; }
+  .sub-label { margin: 18px 0 0; font-family: var(--mono); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+
+  /* services */
+  .services { display: grid; gap: 8px; }
+  .service {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 15px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .019);
+  }
+  .service .n { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; border: 1px solid rgba(147, 169, 255, .24); background: rgba(147, 169, 255, .08); font-family: var(--mono); font-size: 10px; color: #c3d0ff; }
+  .service .head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .service h3 { margin: 0; font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; }
+  .service .src { font-family: var(--mono); font-size: 8px; letter-spacing: .09em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--faint); }
+  .service .src.website { color: #a9ecdf; border-color: rgba(94, 234, 212, .24); }
+  .service p { margin: 6px 0 0; font-size: 12px; line-height: 1.58; color: #a4b1c6; }
+  .service .facts { display: flex; flex-wrap: wrap; gap: 5px 16px; margin-top: 8px; font-size: 10.5px; color: var(--faint); }
+  .service .facts b { color: #c3cddf; font-weight: 500; }
+  .service .evidence { margin-top: 7px; font-size: 10.5px; font-style: italic; color: #7e8ba3; border-left: 2px solid rgba(147, 169, 255, .28); padding-left: 8px; }
+
+  /* audience */
+  .aud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+  .aud-card { padding: 15px 16px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255, 255, 255, .02); }
+  .aud-card .kicker { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .aud-card h3 { margin: 5px 0 0; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .aud-card .type { display: inline-block; margin-top: 5px; font-size: 10.5px; color: #a8b7d2; }
+  .aud-card dl { margin: 10px 0 0; display: grid; gap: 6px; }
+  .aud-card dt { font-family: var(--mono); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .aud-card dd { margin: 0; font-size: 11.5px; line-height: 1.5; color: #bcc8db; }
+  .tag-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; margin-top: 16px; }
+  .tag-group h5 { margin: 0 0 6px; font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .tag-group .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  /* raw */
+  .raw { border: 1px solid var(--line); border-radius: 15px; background: rgba(9, 14, 26, .8); overflow: hidden; }
+  .raw-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; }
+  .raw summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--muted); }
+  .raw summary::-webkit-details-marker { display: none; }
+  .raw summary svg { width: 12px; height: 12px; transition: transform .2s; }
+  .raw[open] summary svg { transform: rotate(90deg); }
+  .raw pre {
+    margin: 0;
+    padding: 16px;
+    max-height: 420px;
+    overflow: auto;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    line-height: 1.65;
+    color: #9fb0c9;
+    background: rgba(0, 0, 0, .28);
+  }
+  .raw-head .toolbar { margin-left: auto; }
+
+  /* API strip */
+  .api-strip { padding: 34px 0 10px; }
+  .api-card { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 26px; padding: 26px; align-items: center; }
+  .api-card h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+  .api-card p { margin: 8px 0 0; font-size: 13px; line-height: 1.65; color: var(--muted); }
+  .api-card .links { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+  .code-block { position: relative; border: 1px solid var(--line); border-radius: 12px; background: rgba(0, 0, 0, .34); overflow: hidden; }
+  .code-block .code-head { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  .code-block .code-head .copy { margin-left: auto; background: none; border: 0; color: var(--faint); font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; padding: 0; }
+  .code-block .code-head .copy:hover { color: var(--text); }
+  .code-block pre { margin: 0; padding: 13px 14px; overflow-x: auto; font-family: var(--mono); font-size: 10.5px; line-height: 1.7; color: #aebbd2; }
+  .code-block .tok { color: #8fd9c9; }
+  .code-block .prop { color: #b9c6ff; }
+
+  /* footer */
+  footer { border-top: 1px solid rgba(255, 255, 255, .05); margin-top: 40px; padding: 22px 0 34px; }
+  .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 11.5px; color: var(--faint); }
+  .footer-inner .fine { font-family: var(--mono); font-size: 10.5px; letter-spacing: .02em; }
+  .footer-inner nav { display: flex; gap: 16px; }
+  .footer-inner a:hover { color: var(--text); }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 1020px) {
+    .intro-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .comp-grid { grid-template-columns: 1fr 1fr; }
+    .summary { grid-template-columns: 1fr; }
+    .tag-groups { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 760px) {
+    .wrap { width: calc(100% - 30px); }
+    .hero { padding-top: 52px; }
+    .status { display: none; }
+    .nav-link { font-size: 12px; padding: 6px 9px; }
+    .nav-link svg { display: none; }
+    .input-shell { flex-wrap: wrap; padding: 10px; gap: 8px; }
+    .input-shell > svg { margin-left: 6px; }
+    .input-shell input { flex-basis: calc(100% - 40px); padding: 10px 0; font-size: 15px; }
+    .input-shell .btn-primary { width: 100%; padding: 13px 18px; }
+    .fineprint { line-height: 1.8; }
+    .intro-grid { grid-template-columns: 1fr 1fr; }
+    .loading-panel { grid-template-columns: 1fr; }
+    .summary { padding: 20px; gap: 20px; }
+    .section { padding: 19px; }
+    .comp-grid, .comp-grid.four, .seo-top, .content-grid, .aud-grid, .landscape, .kw-groups { grid-template-columns: 1fr; }
+    .query { grid-template-columns: 1fr; }
+    .tag-groups { grid-template-columns: 1fr; }
+    .api-card { grid-template-columns: 1fr; padding: 20px; }
+    .section-head .count { display: none; }
+    .brandline h2 { font-size: 21px; }
+    .footer-inner { justify-content: center; text-align: center; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="/" aria-label="LinkLens home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="url(#brandGrad)" stroke-width="2.1" stroke-linecap="round">
+          <defs>
+            <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#b3c2ff"/>
+              <stop offset="1" stop-color="#6ee7d0"/>
+            </linearGradient>
+          </defs>
+          <path d="M5 17V7m0 10h6M14 7v10m0-5h5"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>LinkLens</strong>
+        <small>AI website intelligence</small>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <span class="status" id="statusPill" title="API status">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="statusText">Checking API…</span>
+      </span>
+      <a class="nav-link" href="/docs">API docs
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+      </a>
+      <a class="nav-link" href="https://github.com/dipeshkumar123/ai-link-analysis" target="_blank" rel="noopener">GitHub
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <div class="eyebrow"><b>Live</b> FastAPI · Groq gpt-oss-120b · JSON schema</div>
+    <h1>Turn any website into a <em>growth brief</em>.</h1>
+    <p class="lede">
+      Paste a public URL. Get a structured read on competitors, the searches your buyers
+      actually type, on-page SEO fixes, your strongest services, and who you should be
+      selling to — in about eight seconds.
+    </p>
+
+    <form class="analyze" id="analyzeForm" novalidate>
+      <div class="input-shell">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3c2.6 2.5 2.6 15 0 18M12 3c-2.6 2.5-2.6 15 0 18"/>
+        </svg>
+        <input id="urlInput" name="url" type="text" inputmode="url" autocomplete="url"
+               spellcheck="false" placeholder="https://yourwebsite.com" aria-label="Website URL to analyse">
+        <button class="btn-primary" id="analyzeBtn" type="submit">
+          <span id="analyzeLabel">Analyze</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12h13m-5-6 6 6-6 6"/>
+          </svg>
+        </button>
+      </div>
+      <div class="examples">
+        <span>Try</span>
+        <button type="button" class="example" data-url="https://www.python.org/about/">python.org</button>
+        <button type="button" class="example" data-url="https://stripe.com">stripe.com</button>
+        <button type="button" class="example" data-url="https://www.dxora.com">dxora.com</button>
+      </div>
+      <p class="fineprint">SSRF-protected fetch · no invented search volumes · <span>≈ $0.002 per analysis</span> · nothing stored beyond the cache</p>
+    </form>
+  </section>
+
+  <section class="stage wrap" aria-live="polite" aria-busy="false" id="stage">
+    <div id="intro">
+      <div class="intro-grid">
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 20V10m6 10V4m6 16v-7m6 7V8"/></svg>
+          <h3>Competitor analysis</h3>
+          <p>Three likely rivals, their strengths, gaps and where you win.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <h3>Search queries</h3>
+          <p>Five target queries mapped to intent, platform and audience.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>
+          <h3>SEO improvements</h3>
+          <p>Title, meta description, keyword clusters and content ideas.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.4l6.1-.8Z"/></svg>
+          <h3>Top services</h3>
+          <p>Your five strongest offers, with evidence from the page.</p>
+        </div>
+        <div class="feature">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M17 5.5a3 3 0 0 1 0 5.8M18 20c0-2.4-.8-4.2-2-5.2"/></svg>
+          <h3>Target audience</h3>
+          <p>Primary and secondary segments, industries and buying needs.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading" hidden>
+      <div class="panel loading-panel">
+        <div class="loading-copy">
+          <div class="spinner" aria-hidden="true"></div>
+          <div>
+            <h2>Reading the website…</h2>
+            <p id="loadingStatus">Resolving URL and checking safety…</p>
+          </div>
+          <span class="elapsed" id="elapsed">0.0s</span>
+        </div>
+        <ol class="steps" id="loadingSteps">
+          <li data-step="0" class="active">Validate URL &amp; block private hosts</li>
+          <li data-step="1">Fetch HTML &amp; extract readable content</li>
+          <li data-step="2">Analyse evidence with the LLM</li>
+          <li data-step="3">Validate and normalise JSON</li>
+        </ol>
+        <div class="progress" aria-hidden="true"><i></i></div>
+      </div>
+    </div>
+
+    <div id="error" hidden></div>
+    <div id="results" hidden></div>
+  </section>
+
+  <section class="api-strip wrap">
+    <div class="panel api-card">
+      <div>
+        <h2>Built as an API first</h2>
+        <p>
+          The page is a thin client for <code style="font-family:var(--mono);font-size:12px;color:#bfcdf0">POST /link-analysis</code>.
+          Send a URL, get the same validated JSON that powers this report — ready for your
+          own dashboards, CRMs or agents.
+        </p>
+        <div class="links">
+          <a class="site-link" href="/docs">Interactive reference
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+          </a>
+          <a class="site-link" href="/openapi.json">OpenAPI schema
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+          </a>
+          <a class="site-link" href="/health">Health check
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="code-block">
+        <div class="code-head">
+          <span>curl</span>
+          <button type="button" class="copy" id="copyCurl">Copy</button>
+        </div>
+        <pre id="curlExample"></pre>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>Built by Dipesh Kumar Panjiyar · FastAPI, Groq and strict structured outputs.</span>
+    <nav aria-label="Footer">
+      <a href="/docs">Docs</a>
+      <a href="https://github.com/dipeshkumar123/ai-link-analysis" target="_blank" rel="noopener">Source</a>
+      <a href="https://github.com/dipeshkumar123/ai-link-analysis/blob/main/docs/LLM_RESEARCH.md" target="_blank" rel="noopener">LLM research</a>
+    </nav>
+    <span class="fine">AI-generated insight · verify before commercial use</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+
+  var intro = $("#intro");
+  var loading = $("#loading");
+  var errorBox = $("#error");
+  var results = $("#results");
+  var stage = $("#stage");
+  var form = $("#analyzeForm");
+  var input = $("#urlInput");
+  var button = $("#analyzeBtn");
+  var label = $("#analyzeLabel");
+  var statusPill = $("#statusPill");
+  var statusText = $("#statusText");
+  var loadingStatus = $("#loadingStatus");
+  var elapsedEl = $("#elapsed");
+  var steps = Array.prototype.slice.call(document.querySelectorAll("#loadingSteps li"));
+
+  var lastData = null;
+  var ticker = null;
+  var stepTimer = null;
+  var startedAt = 0;
+
+  var STEPS = [
+    "Resolving URL and checking safety…",
+    "Fetching the page and extracting content…",
+    "Asking the LLM for structured insights…",
+    "Validating and normalising JSON…"
+  ];
+
+  function esc(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function safeHref(value) {
+    if (!value) return null;
+    try {
+      var url = new URL(String(value));
+      if (url.protocol === "http:" || url.protocol === "https:") return url.href;
+    } catch (err) { /* ignore */ }
+    return null;
+  }
+
+  function nonEmpty(list) {
+    return Array.isArray(list) ? list.filter(function (item) {
+      return item !== null && item !== undefined && String(item).trim() !== "";
+    }) : [];
+  }
+
+  function pct(value, limit) {
+    return Math.max(2, Math.min(100, Math.round((value / limit) * 100)));
+  }
+
+  function show(el) { if (el) el.hidden = false; }
+  function hide(el) { if (el) el.hidden = true; }
+
+  function setStatus(kind, text) {
+    statusPill.classList.remove("is-online", "is-offline");
+    if (kind) statusPill.classList.add(kind);
+    statusText.textContent = text;
+  }
+
+  function chip(text, variant) {
+    return '<span class="chip' + (variant ? " " + variant : "") + '">' + esc(text) + "</span>";
+  }
+
+  function anchor(url, text) {
+    var href = safeHref(url);
+    if (!href) return '<span class="site-link">' + esc(text || url) + "</span>";
+    return '<a class="site-link" href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">' +
+      esc(text || href.replace(/^https?:\/\//, "").replace(/\/$/, "")) +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>';
+  }
+
+  function bulletList(items) {
+    var clean = nonEmpty(items);
+    if (!clean.length) return '<p style="margin:0;font-size:12px;color:var(--faint)">No data returned.</p>';
+    return "<ul>" + clean.map(function (item) { return "<li>" + esc(item) + "</li>"; }).join("") + "</ul>";
+  }
+
+  function copyText(text, buttonEl) {
+    var done = function () {
+      if (!buttonEl) return;
+      var original = buttonEl.getAttribute("data-label") || buttonEl.textContent;
+      buttonEl.setAttribute("data-label", original);
+      buttonEl.textContent = "Copied";
+      buttonEl.classList.add("copied");
+      setTimeout(function () {
+        buttonEl.textContent = original;
+        buttonEl.classList.remove("copied");
+      }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    try { document.execCommand("copy"); done(); } catch (err) { /* ignore */ }
+    document.body.removeChild(area);
+  }
+
+  function startLoading() {
+    hide(intro); hide(errorBox); hide(results);
+    show(loading);
+    stage.setAttribute("aria-busy", "true");
+    button.disabled = true;
+    label.textContent = "Analyzing…";
+    startedAt = performance.now();
+
+    var stepIndex = 0;
+    loadingStatus.textContent = STEPS[0];
+    steps.forEach(function (step, index) { step.classList.toggle("active", index === 0); });
+
+    ticker = setInterval(function () {
+      var seconds = (performance.now() - startedAt) / 1000;
+      elapsedEl.textContent = seconds.toFixed(1) + "s";
+    }, 100);
+
+    stepTimer = setInterval(function () {
+      stepIndex = Math.min(stepIndex + 1, STEPS.length - 1);
+      loadingStatus.textContent = STEPS[stepIndex];
+      steps.forEach(function (step, index) { step.classList.toggle("active", index === stepIndex); });
+    }, 2100);
+  }
+
+  function stopLoading() {
+    hide(loading);
+    stage.setAttribute("aria-busy", "false");
+    button.disabled = false;
+    label.textContent = "Analyze";
+    clearInterval(ticker);
+    clearInterval(stepTimer);
+    ticker = null;
+    stepTimer = null;
+  }
+
+  function normalizeUrl(raw) {
+    var value = String(raw || "").trim();
+    if (!value) return "";
+    if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) value = "https://" + value;
+    return value;
+  }
+
+  function renderError(code, message, details, requestId) {
+    var hint = "";
+    if (code === "blocked_ip" || code === "invalid_url" || code === "unsupported_scheme" || code === "invalid_host") {
+      hint = "Use a public http(s) URL. Private, loopback and link-local addresses are blocked for SSRF safety.";
+    } else if (code === "rate_limited") {
+      var retry = details && details.retry_after_seconds;
+      hint = retry ? "Try again in about " + Math.ceil(retry / 60) + " minute(s)." : "Wait a moment and try again.";
+    } else if (code === "unusable_content") {
+      hint = "The page had little readable HTML — it may be JavaScript-rendered or behind a login. Try a content-rich page.";
+    } else if (code === "llm_error" || code === "upstream_error") {
+      hint = "The model provider did not return a usable result. Try again, or try a different page.";
+    } else if (code === "timeout") {
+      hint = "The site took too long to respond. Try a faster page.";
+    }
+
+    errorBox.innerHTML =
+      '<div class="panel error-panel" role="alert">' +
+        '<div class="error-head">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/></svg>' +
+          "<h2>Analysis failed</h2>" +
+          '<span class="error-code">' + esc(code || "error") + "</span>" +
+        "</div>" +
+        "<p>" + esc(message || "Something went wrong. Please try again.") + "</p>" +
+        (hint ? '<p class="hint">' + esc(hint) + "</p>" : "") +
+        (requestId ? '<p class="hint">Request ID: <span style="font-family:var(--mono)">' + esc(requestId) + "</span></p>" : "") +
+      "</div>";
+    show(errorBox);
+    errorBox.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function renderCompetitors(section) {
+    if (!section) return "";
+    var competitors = nonEmpty(section.competitors);
+    var cards = competitors.map(function (item, index) {
+      var site = item.website ? '<div class="site-link" style="margin-top:6px">' + anchor(item.website, item.website.replace(/^https?:\/\//, "")) + "</div>" : "";
+      return '<article class="comp">' +
+        '<div class="comp-top">' +
+          '<span class="rank">0' + (index + 1) + "</span>" +
+          "<h3>" + esc(item.brand_name) + "</h3>" +
+          '<span class="conf ' + esc((item.confidence || "medium").toLowerCase()) + '">' + esc(item.confidence || "medium") + "</span>" +
+        "</div>" +
+        site +
+        "<p>" + esc(item.overview) + "</p>" +
+        "<dl>" +
+          "<div><dt>Main service</dt><dd>" + esc(item.main_service) + "</dd></div>" +
+          "<div><dt>Target market</dt><dd>" + esc(item.target_market) + "</dd></div>" +
+        "</dl>" +
+        '<div class="tone tone-good"><b>Their strength</b>' + esc(item.key_strength) + "</div>" +
+        '<div class="tone tone-warn"><b>Gap to exploit</b>' + esc(item.weakness_or_gap) + "</div>" +
+        '<div class="tone tone-info"><b>Your opening</b>' + esc(item.opportunity_for_your_brand) + "</div>" +
+      "</article>";
+    }).join("");
+
+    return '<section class="panel section">' +
+      '<div class="section-head">' +
+        '<span class="num">01</span>' +
+        "<div><h2>Competitor analysis</h2><p>" + esc(section.brand_overview) + "</p></div>" +
+        '<span class="count">' + competitors.length + " identified</span>" +
+      "</div>" +
+      '<div class="comp-grid' + (competitors.length === 4 ? " four" : "") + '">' + cards + "</div>" +
+      '<div class="landscape">' +
+        '<div class="landscape-block"><h4>Competitor strengths</h4>' + bulletList(section.competitor_strengths) + "</div>" +
+        '<div class="landscape-block"><h4>Competitor weaknesses</h4>' + bulletList(section.competitor_weaknesses) + "</div>" +
+        '<div class="landscape-block"><h4>Your advantages</h4>' + bulletList(section.competitive_advantages) + "</div>" +
+        '<div class="landscape-block"><h4>Positioning opportunities</h4>' + bulletList(section.market_positioning_opportunities) + "</div>" +
+      "</div>" +
+      '<p class="disclaimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg><span>' +
+        esc(section.disclaimer || "Competitor names and comparisons are AI-generated. Verify independently.") +
+      "</span></p>" +
+    "</section>";
+  }
+
+  function renderQueries(queries) {
+    var list = nonEmpty(queries);
+    if (!list.length) return "";
+    var rows = list.map(function (item, index) {
+      var platforms = nonEmpty(item.platforms).map(function (platform) {
+        return '<span class="platform ' + esc(String(platform).toLowerCase()) + '">' + esc(platform) + "</span>";
+      }).join("");
+      return '<div class="query">' +
+        "<div>" +
+          '<div class="q"><span class="idx">Q' + (index + 1) + "</span>" + esc(item.query) + "</div>" +
+          '<div class="platforms">' + platforms + "</div>" +
+        "</div>" +
+        "<div>" +
+          '<span class="intent">' + esc(item.intent) + "</span>" +
+          '<div class="meta"><b>Why it matters</b>' + esc(item.business_relevance) + "</div>" +
+          '<div class="meta"><b>Who is searching</b>' + esc(item.target_audience) + "</div>" +
+        "</div>" +
+      "</div>";
+    }).join("");
+
+    return '<section class="panel section">' +
+      '<div class="section-head">' +
+        '<span class="num">02</span>' +
+        "<div><h2>Target search queries</h2><p>Queries to build content and campaigns around — not search-volume estimates.</p></div>" +
+        '<span class="count">' + list.length + " queries</span>" +
+      "</div>" +
+      '<div class="queries">' + rows + "</div>" +
+    "</section>";
+  }
+
+  function keywordGroup(title, items) {
+    var list = nonEmpty(items);
+    if (!list.length) return "";
+    return '<div class="kw-group"><h5>' + esc(title) + "</h5><div class=\"chips\">" +
+      list.map(function (item) { return chip(item); }).join("") + "</div></div>";
+  }
+
+  function renderSeo(seo) {
+    if (!seo) return "";
+    var title = String(seo.recommended_title || "");
+    var meta = String(seo.meta_description || "");
+    var titlePct = pct(title.length, 60);
+    var metaPct = pct(meta.length, 155);
+
+    var content = nonEmpty(seo.supporting_content).map(function (item) {
+      return '<article class="content-card">' +
+        '<div class="row">' +
+          "<h5>" + esc(item.title) + "</h5>" +
+          '<span class="prio ' + esc(item.priority || "medium") + '">' + esc(item.priority || "medium") + "</span>" +
+        "</div>" +
+        '<div style="margin-top:5px">' + chip(item.content_type) +
+          (item.target_keyword ? " " + chip(item.target_keyword, "accent") : "") + "</div>" +
+        "<p>" + esc(item.description) + "</p>" +
+      "</article>";
+    }).join("");
+
+    var fixes = nonEmpty(seo.on_page_fixes).map(function (item) {
+      return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg><span>' + esc(item) + "</span></li>";
+    }).join("");
+
+    return '<section class="panel section">' +
+      '<div class="section-head">' +
+        '<span class="num">03</span>' +
+        "<div><h2>SEO improvements</h2><p>Recommended metadata, keyword clusters and the pages worth publishing next.</p></div>" +
+      "</div>" +
+      '<div class="seo-top">' +
+        '<div class="seo-box">' +
+          "<h4>Recommended title</h4>" +
+          '<p class="value">' + esc(title) + "</p>" +
+          '<div class="meter"><div class="bar"><i class="' + (title.length > 60 ? "over" : "") + '" style="width:' + titlePct + '%"></i></div><small>' + title.length + "/60</small></div>" +
+          '<p class="rationale">' + esc(seo.title_rationale) + "</p>" +
+        "</div>" +
+        '<div class="seo-box">' +
+          "<h4>Meta description</h4>" +
+          '<p class="value meta">' + esc(meta) + "</p>" +
+          '<div class="meter"><div class="bar"><i class="' + (meta.length > 155 ? "over" : "") + '" style="width:' + metaPct + '%"></i></div><small>' + meta.length + "/155</small></div>" +
+          '<p class="rationale">' + esc(seo.meta_description_rationale) + "</p>" +
+        "</div>" +
+      "</div>" +
+      '<div class="kw-groups">' +
+        keywordGroup("Primary", [seo.primary_keyword]) +
+        keywordGroup("Secondary", seo.secondary_keywords) +
+        keywordGroup("Long-tail", seo.long_tail_keywords) +
+        keywordGroup("Business", seo.business_keywords) +
+      "</div>" +
+      '<p class="sub-label">Supporting content to publish</p>' +
+      '<div class="content-grid">' + content + "</div>" +
+      '<p class="sub-label">On-page fixes</p>' +
+      '<ul class="fixes">' + fixes + "</ul>" +
+    "</section>";
+  }
+
+  function renderServices(services) {
+    var list = nonEmpty(services);
+    if (!list.length) return "";
+    var rows = list.map(function (item, index) {
+      return '<article class="service">' +
+        '<span class="n">' + String(index + 1).padStart(2, "0") + "</span>" +
+        "<div>" +
+          '<div class="head"><h3>' + esc(item.service_name) + "</h3>" +
+            '<span class="src ' + esc(item.source || "website") + '">' + (item.source === "inferred" ? "Inferred" : "From site") + "</span>" +
+          "</div>" +
+          "<p>" + esc(item.description) + "</p>" +
+          '<div class="facts"><span>Industry <b>' + esc(item.target_industry) + "</b></span><span>Buyer <b>" + esc(item.target_customer) + "</b></span></div>" +
+          '<div class="tone tone-info" style="margin-top:8px"><b>Main benefit</b>' + esc(item.main_benefit) + "</div>" +
+          (item.evidence ? '<div class="evidence">“' + esc(item.evidence) + "”</div>" : "") +
+        "</div>" +
+      "</article>";
+    }).join("");
+
+    return '<section class="panel section">' +
+      '<div class="section-head">' +
+        '<span class="num">04</span>' +
+        "<div><h2>Top services</h2><p>The offers the site communicates most clearly, plus adjacent services worth packaging.</p></div>" +
+        '<span class="count">' + list.length + " services</span>" +
+      "</div>" +
+      '<div class="services">' + rows + "</div>" +
+    "</section>";
+  }
+
+  function audienceCard(segment, kicker) {
+    return '<article class="aud-card">' +
+      '<span class="kicker">' + esc(kicker) + "</span>" +
+      "<h3>" + esc(segment.audience) + "</h3>" +
+      '<span class="type">' + esc(segment.business_type) + "</span>" +
+      "<dl>" +
+        "<div><dt>Requirement</dt><dd>" + esc(segment.requirement) + "</dd></div>" +
+        "<div><dt>Customer needs</dt><dd>" + esc(segment.customer_needs) + "</dd></div>" +
+        "<div><dt>Why it fits</dt><dd>" + esc(segment.why_fit) + "</dd></div>" +
+      "</dl>" +
+    "</article>";
+  }
+
+  function tagGroup(title, items) {
+    var list = nonEmpty(items);
+    if (!list.length) return "";
+    return '<div class="tag-group"><h5>' + esc(title) + '</h5><div class="chips">' +
+      list.map(function (item) { return chip(item); }).join("") + "</div></div>";
+  }
+
+  function renderAudience(audience) {
+    if (!audience) return "";
+    var primary = nonEmpty(audience.primary_audience).map(function (item) {
+      return audienceCard(item, "Primary segment");
+    }).join("");
+    var secondary = nonEmpty(audience.secondary_audience).map(function (item) {
+      return audienceCard(item, "Secondary segment");
+    }).join("");
+
+    return '<section class="panel section">' +
+      '<div class="section-head">' +
+        '<span class="num">05</span>' +
+        "<div><h2>Target audience</h2><p>Who the offer is built for, what they need, and where to reach them.</p></div>" +
+        (audience.location_focus ? '<span class="count">' + esc(audience.location_focus) + "</span>" : "") +
+      "</div>" +
+      '<div class="aud-grid">' + primary + secondary + "</div>" +
+      '<div class="tag-groups">' +
+        tagGroup("Industries", audience.industries) +
+        tagGroup("Business types", audience.business_types) +
+        tagGroup("Customer profiles", audience.customer_profiles) +
+        tagGroup("Customer needs", audience.customer_needs) +
+        tagGroup("Challenges", audience.customer_challenges) +
+        tagGroup("Interests", audience.interests) +
+        tagGroup("Recommended segments", audience.recommended_segments) +
+        tagGroup("Location focus", [audience.location_focus]) +
+      "</div>" +
+    "</section>";
+  }
+
+  function renderWarnings(warnings) {
+    var list = nonEmpty(warnings);
+    if (!list.length) return "";
+    return '<div class="notice">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3.5 21 19H3L12 3.5Z"/><path d="M12 10v4M12 17h.01"/></svg>' +
+      "<div><strong style=\"color:#f3d9ae;font-weight:600\">Good to know</strong><ul>" +
+        list.map(function (item) { return "<li>" + esc(item) + "</li>"; }).join("") +
+      "</ul></div>" +
+    "</div>";
+  }
+
+  function renderReport(data) {
+    var brand = data.brand || {};
+    var analysis = data.analysis || {};
+    var metadata = data.metadata || {};
+    var llm = metadata.llm || {};
+    var extraction = metadata.extraction || {};
+    var initials = String(brand.name || "?")
+      .split(/\s+/).filter(Boolean).slice(0, 2)
+      .map(function (part) { return part.charAt(0).toUpperCase(); }).join("");
+
+    var latency = llm.latency_ms ? (llm.latency_ms / 1000).toFixed(1) + "<em>s</em>" : "—";
+    var tokens = llm.total_tokens ? Number(llm.total_tokens).toLocaleString() : "—";
+    var cost = typeof llm.estimated_cost_usd === "number" ? "$" + llm.estimated_cost_usd.toFixed(5) : "—";
+    var words = extraction.word_count ? Number(extraction.word_count).toLocaleString() : "0";
+    var siteHref = safeHref(brand.website) || safeHref(data.website);
+
+    var offerings = nonEmpty(brand.main_offerings).map(function (item) { return chip(item); }).join("");
+    var evidence = nonEmpty(brand.evidence);
+    var evidenceBlock = evidence.length
+      ? '<p class="sub-label" style="margin-top:18px">Evidence from the page</p><div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px">' +
+        evidence.map(function (item) { return chip("“" + item + "”"); }).join("") + "</div>"
+      : "";
+
+    var rawJson = JSON.stringify(data, null, 2);
+    var rawBlock =
+      '<details class="raw">' +
+        '<div class="raw-head">' +
+          "<summary><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"m9 6 6 6-6 6\"/></svg>Raw JSON response</summary>" +
+          '<div class="toolbar">' +
+            '<button type="button" class="btn-ghost" id="copyRaw">Copy JSON</button>' +
+            '<button type="button" class="btn-ghost" id="downloadRaw">Download</button>' +
+          "</div>" +
+        "</div>" +
+        "<pre>" + esc(rawJson) + "</pre>" +
+      "</details>";
+
+    results.innerHTML =
+      '<div class="report">' +
+        '<section class="panel summary">' +
+          "<div>" +
+            '<div class="brandline">' +
+              '<span class="avatar">' + esc(initials) + "</span>" +
+              "<div><h2>" + esc(brand.name || "Website") + "</h2>" +
+                '<span class="cat">' + esc(brand.category || analysis.competitor_analysis && analysis.competitor_analysis.main_category || "") + "</span></div>" +
+            "</div>" +
+            '<p class="about">' + esc(brand.summary) + "</p>" +
+            '<div class="offerings">' + offerings + "</div>" +
+            '<div class="summary-links">' +
+              (siteHref ? anchor(siteHref, siteHref.replace(/^https?:\/\//, "").replace(/\/$/, "")) : "") +
+              '<span class="chip' + (llm.cached ? " mint" : "") + '">' + (llm.cached ? "Cached result" : "Fresh analysis") + "</span>" +
+              (llm.fallback_used ? '<span class="chip amber">Fallback model</span>' : "") +
+            "</div>" +
+            evidenceBlock +
+          "</div>" +
+          "<div>" +
+            '<div class="stats">' +
+              '<div class="stat"><small>Latency</small><b>' + latency + "</b></div>" +
+              '<div class="stat"><small>Tokens</small><b>' + tokens + "</b></div>" +
+              '<div class="stat"><small>Estimated cost</small><b>' + cost + "</b></div>" +
+              '<div class="stat"><small>Words read</small><b>' + words + "</b></div>" +
+            "</div>" +
+            '<div class="stats" style="margin-top:9px;grid-template-columns:1fr">' +
+              '<div class="stat"><small>Model</small><b style="font-family:var(--mono);font-size:11.5px">' +
+                esc(llm.provider || "llm") + " / " + esc(llm.model || "") + "</b></div>" +
+            "</div>" +
+            '<div class="toolbar" style="margin-top:14px">' +
+              '<button type="button" class="btn-ghost" id="copySummary">Copy summary</button>' +
+              '<button type="button" class="btn-ghost" id="newAnalysis">New analysis</button>' +
+            "</div>" +
+          "</div>" +
+        "</section>" +
+        renderWarnings(data.warnings) +
+        renderCompetitors(analysis.competitor_analysis) +
+        renderQueries(analysis.target_search_queries) +
+        renderSeo(analysis.seo_improvements) +
+        renderServices(analysis.top_services) +
+        renderAudience(analysis.target_audience) +
+        rawBlock +
+      "</div>";
+
+    show(results);
+    bindResultActions(data);
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function bindResultActions(data) {
+    var brand = data.brand || {};
+    var analysis = data.analysis || {};
+
+    var copyRaw = $("#copyRaw");
+    if (copyRaw) copyRaw.addEventListener("click", function () {
+      copyText(JSON.stringify(data, null, 2), copyRaw);
+    });
+
+    var downloadRaw = $("#downloadRaw");
+    if (downloadRaw) downloadRaw.addEventListener("click", function () {
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement("a");
+      link.href = url;
+      link.download = "link-analysis.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
+
+    var copySummary = $("#copySummary");
+    if (copySummary) copySummary.addEventListener("click", function () {
+      var competitors = nonEmpty((analysis.competitor_analysis || {}).competitors)
+        .map(function (item) { return item.brand_name; }).join(", ");
+      var queries = nonEmpty(analysis.target_search_queries)
+        .map(function (item) { return item.query; }).join("; ");
+      var text = [
+        brand.name + " — " + (brand.category || ""),
+        brand.summary,
+        "",
+        "Competitors: " + competitors,
+        "Target queries: " + queries
+      ].join("\n");
+      copyText(text, copySummary);
+    });
+
+    var newAnalysis = $("#newAnalysis");
+    if (newAnalysis) newAnalysis.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(function () { input.focus(); input.select(); }, 420);
+    });
+  }
+
+  async function analyze(url) {
+    startLoading();
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 120000);
+
+    try {
+      var response = await fetch("/link-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({ url: url }),
+        signal: controller.signal
+      });
+      var data = null;
+      try { data = await response.json(); } catch (err) { data = null; }
+
+      if (!response.ok || !data || data.success === false) {
+        var error = (data && data.error) || {};
+        renderError(
+          error.code || (response.status === 429 ? "rate_limited" : "http_" + response.status),
+          error.message || "The server returned " + response.status + ".",
+          error.details,
+          (data && data.request_id) || response.headers.get("X-Request-ID")
+        );
+        return;
+      }
+
+      lastData = data;
+      renderReport(data);
+    } catch (err) {
+      if (err && err.name === "AbortError") {
+        renderError("timeout", "The analysis took longer than two minutes and was stopped.", null, null);
+      } else {
+        renderError("network_error", "Could not reach the API. Check your connection and try again.", null, null);
+      }
+    } finally {
+      clearTimeout(timeout);
+      stopLoading();
+    }
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var url = normalizeUrl(input.value);
+    if (!url) {
+      input.focus();
+      input.setAttribute("aria-invalid", "true");
+      input.placeholder = "Enter a website URL, for example https://example.com";
+      return;
+    }
+    input.value = url;
+    input.removeAttribute("aria-invalid");
+    analyze(url);
+  });
+
+  input.addEventListener("input", function () {
+    input.removeAttribute("aria-invalid");
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll(".example"), function (element) {
+    element.addEventListener("click", function () {
+      var url = element.getAttribute("data-url");
+      input.value = url;
+      analyze(url);
+    });
+  });
+
+  var copyCurl = $("#copyCurl");
+  if (copyCurl) copyCurl.addEventListener("click", function () {
+    copyText($("#curlExample").textContent, copyCurl);
+  });
+
+  function initCurl() {
+    var endpoint = window.location.origin + "/link-analysis";
+    $("#curlExample").innerHTML =
+      '<span class="prop">curl</span> -X POST "' + esc(endpoint) + '" \\\n' +
+      '  -H <span class="tok">"Content-Type: application/json"</span> \\\n' +
+      "  -d '<span class=\"prop\">{\"url\":</span><span class=\"tok\">\"https://www.python.org/about/\"</span><span class=\"prop\">}</span>'";
+  }
+
+  function checkHealth() {
+    fetch("/health", { headers: { "Accept": "application/json" } })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (data) {
+        if (data && data.status === "ok") {
+          setStatus("is-online", "Online · " + (data.llm_model || "LLM"));
+        } else {
+          setStatus("is-offline", "API unavailable");
+        }
+      })
+      .catch(function () { setStatus("is-offline", "API unavailable"); });
+  }
+
+  initCurl();
+  checkHealth();
+
+  var params = new URLSearchParams(window.location.search);
+  var shared = params.get("url");
+  if (shared) {
+    input.value = shared;
+    input.focus();
+  }
+})();
+</script>
+</body>
+</html>

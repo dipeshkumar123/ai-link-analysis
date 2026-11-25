@@ -16,11 +16,17 @@ SSRF protections, and uses a structured-output LLM to return five business insig
 The API does **not** invent Google/Facebook/Instagram/LinkedIn/X search volumes. It
 returns `null`/no volume data and states this in the response warnings.
 
+The repository also ships **LinkLens**, a polished single-page frontend served at `/`.
+Paste a URL and the page renders the same validated JSON as a readable report, with
+token/cost metadata, warnings and a raw-JSON view.
+
 **Live demo:** https://ai-link-analysis-nine.vercel.app
 **Interactive docs:** https://ai-link-analysis-nine.vercel.app/docs
 **GitHub:** https://github.com/dipeshkumar123/ai-link-analysis
 
-![Swagger UI](docs/swagger-ui.png)
+[![LinkLens frontend](docs/frontend.png)](https://ai-link-analysis-nine.vercel.app)
+
+![Analysis report rendered by the frontend](docs/frontend-report.png)
 
 ---
 
@@ -39,7 +45,8 @@ Copy-Item .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 4000
 ```
 
-Open http://127.0.0.1:4000/docs for Swagger UI.
+Open http://127.0.0.1:4000 for the web app, or
+http://127.0.0.1:4000/docs for Swagger UI.
 
 ### Test a request
 
@@ -201,12 +208,27 @@ Response (abridged; see `samples/response.json` for the full object):
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/` | Service metadata |
+| `GET` | `/` | LinkLens web UI (single-page frontend) |
+| `GET` | `/api` | Service metadata (JSON) |
 | `GET` | `/health` | Health/readiness and active LLM configuration |
 | `GET` | `/docs` | Swagger UI |
 | `GET` | `/redoc` | ReDoc |
 | `GET` | `/openapi.json` | OpenAPI schema |
 | `POST` | `/link-analysis` | Main analysis endpoint |
+
+### Web UI
+
+`GET /` serves a dependency-free single-page app (`app/static/index.html`, no build
+step) that calls `POST /link-analysis` and renders the response as a report:
+
+- summary card with brand, category, offerings, page evidence, latency, tokens and cost;
+- competitor cards with confidence badges and the AI-generated disclaimer;
+- search-query, SEO, service and audience sections;
+- warnings, cache/fallback badges, copy-to-clipboard, JSON download and an example
+  `curl` call.
+
+The page is responsive, honours `prefers-reduced-motion`, and is read from disk per
+request, so it deploys unchanged to Vercel.
 
 ### Error format
 
@@ -387,8 +409,9 @@ RATE_LIMIT_PER_HOUR=60
 Vercel Hobby has a 300-second function limit; this API normally returns in under
 15 seconds. The cache uses `/tmp` when the `VERCEL` environment variable is set.
 
-After deployment, update the live URL at the top of this README and submit it with
-the application.
+After deployment, the web app is served at `/`, Swagger UI at `/docs`, and the
+analysis endpoint at `POST /link-analysis`. The current production alias is
+https://ai-link-analysis-nine.vercel.app.
 
 ---
 
@@ -401,6 +424,8 @@ ai-link-analysis/
 │   ├── config.py                # settings and pricing table
 │   ├── schemas.py               # request/response and LLM payload models
 │   ├── exceptions.py            # AppError
+│   ├── static/
+│   │   └── index.html           # LinkLens single-page frontend (no build step)
 │   ├── services/
 │   │   ├── analysis_service.py  # orchestration and caching
 │   │   ├── website_extractor.py # fetching, parsing, SSRF-safe redirects
@@ -413,6 +438,9 @@ ai-link-analysis/
 │       ├── text.py
 │       └── logging.py
 ├── docs/
+│   ├── frontend.png             # UI hero screenshot
+│   ├── frontend-report.png      # rendered analysis report
+│   ├── swagger-ui.png
 │   ├── LLM_RESEARCH.md
 │   └── sample-run.txt
 ├── samples/
