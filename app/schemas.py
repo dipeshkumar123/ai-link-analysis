@@ -77,10 +77,10 @@ class CompetitorAnalysis(BaseModel):
     main_category: str = Field(..., min_length=2, max_length=160)
     main_products_services: list[str] = Field(default_factory=list, min_length=1)
     competitors: list[Competitor] = Field(default_factory=list)
-    competitor_strengths: list[str] = Field(..., min_length=2)
-    competitor_weaknesses: list[str] = Field(..., min_length=2)
-    competitive_advantages: list[str] = Field(..., min_length=2)
-    market_positioning_opportunities: list[str] = Field(..., min_length=2)
+    competitor_strengths: list[str] = Field(default_factory=list)
+    competitor_weaknesses: list[str] = Field(default_factory=list)
+    competitive_advantages: list[str] = Field(default_factory=list)
+    market_positioning_opportunities: list[str] = Field(default_factory=list)
     disclaimer: str = Field(
         default=(
             "Competitor names and comparisons are AI-generated suggestions from the model's "
@@ -132,15 +132,15 @@ class SeoContentSuggestion(BaseModel):
 
 class SeoImprovements(BaseModel):
     primary_keyword: str = Field(..., min_length=2, max_length=120)
-    secondary_keywords: list[str] = Field(..., min_length=3)
-    long_tail_keywords: list[str] = Field(..., min_length=3)
-    business_keywords: list[str] = Field(..., min_length=3)
+    secondary_keywords: list[str] = Field(default_factory=list)
+    long_tail_keywords: list[str] = Field(default_factory=list)
+    business_keywords: list[str] = Field(default_factory=list)
     recommended_title: str = Field(..., min_length=10, max_length=100)
     title_rationale: str = Field(..., min_length=10, max_length=300)
     meta_description: str = Field(..., min_length=50, max_length=220)
     meta_description_rationale: str = Field(..., min_length=10, max_length=300)
-    supporting_content: list[SeoContentSuggestion] = Field(..., min_length=4)
-    on_page_fixes: list[str] = Field(..., min_length=2)
+    supporting_content: list[SeoContentSuggestion] = Field(default_factory=list)
+    on_page_fixes: list[str] = Field(default_factory=list)
 
 
 class Service(BaseModel):
@@ -178,16 +178,16 @@ class AudienceSegment(BaseModel):
 class TargetAudience(BaseModel):
     primary_audience: list[AudienceSegment] = Field(..., min_length=2)
     secondary_audience: list[AudienceSegment] = Field(..., min_length=1)
-    industries: list[str] = Field(..., min_length=2)
-    business_types: list[str] = Field(..., min_length=2)
-    customer_profiles: list[str] = Field(..., min_length=2)
+    industries: list[str] = Field(..., min_length=1)
+    business_types: list[str] = Field(..., min_length=1)
+    customer_profiles: list[str] = Field(..., min_length=1)
     location_focus: str | None = Field(
         default=None, description="Geographic focus if stated; otherwise null."
     )
-    customer_needs: list[str] = Field(..., min_length=2)
-    customer_challenges: list[str] = Field(..., min_length=2)
-    interests: list[str] = Field(..., min_length=2)
-    recommended_segments: list[str] = Field(..., min_length=2)
+    customer_needs: list[str] = Field(..., min_length=1)
+    customer_challenges: list[str] = Field(..., min_length=1)
+    interests: list[str] = Field(..., min_length=1)
+    recommended_segments: list[str] = Field(..., min_length=1)
 
 
 class AnalysisSections(BaseModel):

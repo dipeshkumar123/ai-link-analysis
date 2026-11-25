@@ -283,8 +283,8 @@ class LLMService:
                 return parsed
 
         raise LLMServiceError(
-            "The model did not return valid structured output after a repair attempt. "
-            "Try again or switch the configured model.",
+            "The model returned an incomplete structured result. Please try again; if it "
+            "persists, switch the configured model.",
             code="llm_invalid_output",
             status_code=502,
             retryable=True,

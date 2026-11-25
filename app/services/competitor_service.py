@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 
-from app.schemas import Competitor, LLMAnalysisPayload
+from app.schemas import Competitor, LLMAnalysisPayload, SeoContentSuggestion
 from app.services.website_extractor import ExtractedWebsite
 from app.utils.text import dedupe_preserve_order
 
@@ -56,6 +56,45 @@ def _trim_seo(value: str, limit: int) -> tuple[str, bool]:
     if boundary >= int(limit * 0.65):
         candidate = candidate[:boundary]
     return candidate.rstrip(" ,.;:-\u2013\u2014&|"), True
+
+
+def _clean_text_list(values: list[str], limit: int) -> list[str]:
+    """Strip, drop blanks/unknown placeholders and de-duplicate while keeping order."""
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = (value or "").strip()
+        key = text.casefold()
+        if not text or key in seen or key.startswith("unknown"):
+            continue
+        seen.add(key)
+        cleaned.append(text)
+    return cleaned[:limit]
+
+
+def _pad_text_list(
+    values: list[str],
+    fallbacks: list[str],
+    *,
+    minimum: int,
+    generic: str,
+) -> list[str]:
+    """Guarantee a useful minimum length for supplementary summary lists."""
+    cleaned = _clean_text_list(values, 6)
+    for candidate in fallbacks:
+        if len(cleaned) >= minimum:
+            break
+        text = (candidate or "").strip()
+        if not text or text.casefold().startswith("unknown"):
+            continue
+        if text.casefold() in {item.casefold() for item in cleaned}:
+            continue
+        cleaned.append(text)
+    if len(cleaned) < minimum:
+        cleaned.append(generic)
+    if len(cleaned) < minimum:
+        cleaned.append("Verify this dimension manually before relying on it.")
+    return cleaned
 
 
 def normalise_analysis(
@@ -130,14 +169,41 @@ def normalise_analysis(
     competitor_analysis.main_products_services = dedupe_preserve_order(
         competitor_analysis.main_products_services
     )[:8]
-    for field_name in (
-        "competitor_strengths",
-        "competitor_weaknesses",
-        "competitive_advantages",
-        "market_positioning_opportunities",
-    ):
-        values = dedupe_preserve_order(getattr(competitor_analysis, field_name))[:6]
-        setattr(competitor_analysis, field_name, values)
+
+    reliable_competitors = [
+        item
+        for item in competitor_analysis.competitors
+        if not item.brand_name.startswith("Unverified competitor")
+    ]
+    summary_fields = {
+        "competitor_strengths": (
+            [item.key_strength for item in reliable_competitors],
+            "No additional competitor strength was evidenced on the supplied page.",
+        ),
+        "competitor_weaknesses": (
+            [item.weakness_or_gap for item in reliable_competitors],
+            "No additional competitor weakness was evidenced on the supplied page.",
+        ),
+        "competitive_advantages": (
+            [],
+            "The page describes a distinct offer; validate the advantage with customer evidence.",
+        ),
+        "market_positioning_opportunities": (
+            [item.opportunity_for_your_brand for item in reliable_competitors],
+            "Validate positioning opportunities with first-party keyword and win-loss research.",
+        ),
+    }
+    for field_name, (fallbacks, generic) in summary_fields.items():
+        setattr(
+            competitor_analysis,
+            field_name,
+            _pad_text_list(
+                getattr(competitor_analysis, field_name),
+                fallbacks,
+                minimum=2,
+                generic=generic,
+            ),
+        )
 
     queries = data.analysis.target_search_queries[:5]
     for query in queries:
@@ -165,11 +231,35 @@ def normalise_analysis(
         warnings.append("The generated SEO title was trimmed to 60 characters.")
     if meta_trimmed:
         warnings.append("The generated meta description was trimmed to 155 characters.")
-    seo.secondary_keywords = dedupe_preserve_order(seo.secondary_keywords)[:12]
-    seo.long_tail_keywords = dedupe_preserve_order(seo.long_tail_keywords)[:12]
-    seo.business_keywords = dedupe_preserve_order(seo.business_keywords)[:12]
+    seo.secondary_keywords = _clean_text_list(seo.secondary_keywords, 12)
+    seo.long_tail_keywords = _clean_text_list(seo.long_tail_keywords, 12)
+    seo.business_keywords = _clean_text_list(seo.business_keywords, 12)
+    if not seo.secondary_keywords:
+        seo.secondary_keywords = list(seo.long_tail_keywords[:1]) or [seo.primary_keyword]
+    if not seo.long_tail_keywords:
+        seo.long_tail_keywords = list(seo.secondary_keywords[:1]) or [seo.primary_keyword]
+    if not seo.business_keywords:
+        seo.business_keywords = [seo.primary_keyword]
     seo.supporting_content = seo.supporting_content[:8]
-    seo.on_page_fixes = dedupe_preserve_order(seo.on_page_fixes)[:8]
+    if not seo.supporting_content:
+        seo.supporting_content = [
+            SeoContentSuggestion(
+                content_type="Guide",
+                title=f"Complete guide to {seo.primary_keyword}"[:160],
+                description=(
+                    "Explain the offer, who it is for and the outcomes a customer can expect, "
+                    "using evidence from the page."
+                ),
+                target_keyword=seo.primary_keyword,
+                priority="medium",
+            )
+        ]
+    seo.on_page_fixes = _clean_text_list(seo.on_page_fixes, 8)
+    if not seo.on_page_fixes:
+        seo.on_page_fixes = [
+            "Add a clear, benefit-led meta description.",
+            "Use one descriptive H1 that matches the primary keyword.",
+        ]
 
     audience = data.analysis.target_audience
     if audience.location_focus is not None and not audience.location_focus.strip():
