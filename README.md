@@ -503,6 +503,7 @@ ai-link-analysis/
 - [x] README, samples and LLM research
 - [x] Docker and Vercel deployment files
 - [x] Live demo deployed at https://ai-link-analysis-nine.vercel.app
+- [x] Web UI served at `/` and verified in production (hero, live analysis, report, error state)
 - [x] Submission email drafted with demo, GitHub, contact details and discussion window
 - [ ] Submission email sent to `hr@chivoxai.com`
 - [x] Dxora LinkedIn and CREST Instagram followed
