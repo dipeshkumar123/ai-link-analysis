@@ -1,65 +1,83 @@
 # AI-Powered Website Link Analysis API
 
 A FastAPI service that fetches a public website, extracts its visible content with
-SSRF protections, and uses a structured-output LLM to return five business insights:
+SSRF protections, and uses a structured-output LLM to return five business insights.
 
-1. **Competitor analysis** — clearly labelled AI-generated competitor suggestions,
-   strengths, weaknesses and positioning opportunities.
-2. **Target search queries** — platform-tagged query ideas with intent and relevance.
-3. **SEO improvements** — primary/secondary/long-tail keywords, title and meta
-   suggestions, supporting content and on-page fixes.
-4. **Top services** — services stated on the page plus clearly labelled inferred
-   services.
-5. **Target audience** — primary/secondary segments, industries, needs, challenges
-   and recommended segments.
+**Live demo:** https://ai-link-analysis-nine.vercel.app · **API docs:** [/docs](https://ai-link-analysis-nine.vercel.app/docs) · **GitHub:** https://github.com/dipeshkumar123/ai-link-analysis
 
-The API does **not** invent Google/Facebook/Instagram/LinkedIn/X search volumes. It
-returns `null`/no volume data and states this in the response warnings.
-
-The repository also ships **LinkLens**, a polished single-page frontend served at `/`.
-Paste a URL and the page renders the same validated JSON as a readable report, with
-token/cost metadata, warnings and a raw-JSON view.
-
-**Live demo:** https://ai-link-analysis-nine.vercel.app
-**Interactive docs:** https://ai-link-analysis-nine.vercel.app/docs
-**GitHub:** https://github.com/dipeshkumar123/ai-link-analysis
+The repository also ships **LinkLens**, a dependency-free single-page frontend served at
+`/`. Paste a URL and the page renders the validated JSON as a readable report.
 
 [![LinkLens frontend](docs/frontend.png)](https://ai-link-analysis-nine.vercel.app)
 
 ![Analysis report rendered by the frontend](docs/frontend-report.png)
 
-The live report ran on the primary model `openai/gpt-oss-120b` with no fallback and no repair attempts — confirming the validation-relaxation fix is in production. The page reflows to a single stacked column below 560px (mobile hero and report verified on iPhone width).
+---
+
+## What it returns
+
+Every successful analysis has five sections:
+
+| Section | Contents |
+| --- | --- |
+| **Competitor analysis** | AI-generated competitor suggestions with strengths, weaknesses, positioning opportunities and a disclaimer |
+| **Target search queries** | Five buyer-intent queries, each mapped to Google, Facebook, Instagram, LinkedIn and/or X |
+| **SEO improvements** | Primary, secondary, long-tail and business keywords; title/meta suggestions; supporting content and on-page fixes |
+| **Top services** | Services stated on the page plus services clearly labelled as inferred |
+| **Target audience** | Primary/secondary segments, industries, customer needs, challenges and recommended segments |
+
+The API does **not** invent Google/Facebook/Instagram/LinkedIn/X search volumes. It
+returns no volume data and states this in the response warnings.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A["Client / LinkLens UI<br/>POST /link-analysis"] --> B["FastAPI app<br/>app/main.py"]
+    B --> C["URL validation + SSRF guard<br/>app/utils/validators.py"]
+    C --> D["Fetch page<br/>app/services/website_extractor.py"]
+    D --> E["Extract visible content<br/>title · meta · OG · JSON-LD · headings · text"]
+    E --> F["Build compact prompt + JSON schema<br/>app/services/prompts.py"]
+    F --> G["LLM service<br/>structured output, repair, fallback"]
+    G -->|primary| H["Groq gpt-oss-120b"]
+    G -->|fallback| I["Groq gpt-oss-20b"]
+    G --> J["Validate + normalise<br/>app/services/competitor_service.py"]
+    J --> K[("TTL cache<br/>SQLite / /tmp")]
+    K --> B
+    B --> L["JSON report + metadata<br/>tokens · cost · latency · warnings"]
+```
+
+The pipeline is deliberately linear: validate, fetch, extract, prompt, call, validate,
+cache, return. The LLM is the only external dependency and is wrapped with schema
+enforcement, one optional repair pass and a configured fallback.
 
 ---
 
 ## Quick start
 
-Requirements: Python 3.11+ (developed and tested on 3.13), a Groq API key, and a
-local Python environment with the packages from `requirements.txt`.
+Requirements: Python 3.11+ (tested on 3.13) and a Groq API key.
 
 ```powershell
-cd D:\Projects\ai-link-analysis
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-Copy-Item .env.example .env
-# Edit .env and set GROQ_API_KEY=...
+Copy-Item .env.example .env        # then set GROQ_API_KEY=...
 uvicorn app.main:app --host 0.0.0.0 --port 4000
 ```
 
-Open http://127.0.0.1:4000 for the web app, or
-http://127.0.0.1:4000/docs for Swagger UI.
-
-### Test a request
+Open http://127.0.0.1:4000 for the web app, or http://127.0.0.1:4000/docs for Swagger UI.
 
 ```powershell
 $body = '{"url":"https://www.python.org/about/"}'
-Invoke-RestMethod -Uri http://127.0.0.1:4000/link-analysis `
-  -Method Post -ContentType 'application/json' -Body $body
+Invoke-RestMethod -Uri http://127.0.0.1:4000/link-analysis -Method Post `
+  -ContentType 'application/json' -Body $body
 ```
 
-A real sample response is in [`samples/response.json`](samples/response.json) and a
-sample invalid-URL error is in [`samples/error.json`](samples/error.json).
+A real response is in [`samples/response.json`](samples/response.json); a sample error is
+in [`samples/error.json`](samples/error.json); a captured run log is in
+[`docs/sample-run.txt`](docs/sample-run.txt).
 
 ---
 
@@ -73,7 +91,7 @@ Request:
 { "url": "https://www.python.org/about/" }
 ```
 
-Response (abridged; see `samples/response.json` for the full object):
+Response (abridged — see `samples/response.json` for the full object):
 
 ```json
 {
@@ -85,22 +103,18 @@ Response (abridged; see `samples/response.json` for the full object):
     "category": "Programming language community / Open source software",
     "summary": "Python.org is the official home of the Python programming language...",
     "website": "https://www.python.org",
-    "main_offerings": ["Beginner's Guides", "Official Documentation", "..."],
+    "main_offerings": ["Beginner's Guides", "Official Documentation"],
     "target_market": null,
-    "evidence": ["The official home of the Python Programming Language", "..."]
+    "evidence": ["The official home of the Python Programming Language"]
   },
   "analysis": {
     "competitor_analysis": {
-      "brand_overview": "...",
       "main_category": "Open source software",
-      "main_products_services": ["..."],
       "competitors": [
         {
           "brand_name": "Ruby.org",
           "website": null,
-          "overview": "...",
-          "main_service": "Ruby language documentation and community resources",
-          "target_market": "...",
+          "main_service": "Ruby language documentation",
           "key_strength": "...",
           "weakness_or_gap": "...",
           "opportunity_for_your_brand": "...",
@@ -131,7 +145,6 @@ Response (abridged; see `samples/response.json` for the full object):
       "recommended_title": "Python Programming Language - Docs, Tutorials, Community",
       "title_rationale": "...",
       "meta_description": "...",
-      "meta_description_rationale": "...",
       "supporting_content": [
         { "content_type": "...", "title": "...", "description": "...", "priority": "high" }
       ],
@@ -160,28 +173,15 @@ Response (abridged; see `samples/response.json` for the full object):
       ],
       "secondary_audience": ["..."],
       "industries": ["..."],
-      "business_types": ["..."],
       "customer_profiles": ["..."],
       "location_focus": null,
       "customer_needs": ["..."],
       "customer_challenges": ["..."],
-      "interests": ["..."],
       "recommended_segments": ["..."]
     }
   },
   "metadata": {
-    "extraction": {
-      "requested_url": "https://www.python.org/about/",
-      "final_url": "https://www.python.org/about/",
-      "status_code": 200,
-      "title": "About Python | Python.org",
-      "meta_description": "The official home of the Python Programming Language",
-      "word_count": 318,
-      "content_chars": 2156,
-      "truncated": false,
-      "fetched_at": "2026-11-23T07:39:15.523291Z",
-      "warnings": []
-    },
+    "extraction": { "status_code": 200, "title": "...", "word_count": 318, "truncated": false },
     "llm": {
       "provider": "groq",
       "model": "openai/gpt-oss-120b",
@@ -189,52 +189,33 @@ Response (abridged; see `samples/response.json` for the full object):
       "output_tokens": 3093,
       "total_tokens": 6588,
       "estimated_cost_usd": 0.00238005,
-      "pricing_source": "https://console.groq.com/docs/models",
-      "pricing_note": "Free tier observed at 8,000 tokens/minute and 1,000 requests/day on 2026-11-23.",
       "latency_ms": 7503,
       "cached": false,
       "fallback_used": false,
-      "repair_attempts": 0,
-      "token_usage_estimated": false
+      "repair_attempts": 0
     }
   },
   "warnings": [
-    "The generated SEO title was trimmed to 60 characters.",
-    "No explicit geographic focus was stated on the page; audience location was left blank.",
-    "Competitor data is AI-generated. No Google, Facebook, Instagram, LinkedIn or X search volume data is reported because no official search-volume API was used."
+    "Competitor data is AI-generated. No search-volume data is reported."
   ]
 }
 ```
 
-### Other endpoints
+### Endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/` | LinkLens web UI (single-page frontend) |
+| `POST` | `/link-analysis` | Main analysis endpoint |
+| `GET` | `/` | LinkLens web UI |
 | `GET` | `/api` | Service metadata (JSON) |
 | `GET` | `/health` | Health/readiness and active LLM configuration |
 | `GET` | `/docs` | Swagger UI |
 | `GET` | `/redoc` | ReDoc |
 | `GET` | `/openapi.json` | OpenAPI schema |
-| `POST` | `/link-analysis` | Main analysis endpoint |
-
-### Web UI
-
-`GET /` serves a dependency-free single-page app (`app/static/index.html`, no build
-step) that calls `POST /link-analysis` and renders the response as a report:
-
-- summary card with brand, category, offerings, page evidence, latency, tokens and cost;
-- competitor cards with confidence badges and the AI-generated disclaimer;
-- search-query, SEO, service and audience sections;
-- warnings, cache/fallback badges, copy-to-clipboard, JSON download and an example
-  `curl` call.
-
-The page is responsive, honours `prefers-reduced-motion`, and is read from disk per
-request, so it deploys unchanged to Vercel.
 
 ### Error format
 
-All errors use the same shape:
+All errors share one shape:
 
 ```json
 {
@@ -257,28 +238,23 @@ Common codes: `invalid_request`, `invalid_url`, `unsupported_scheme`,
 
 ## How it works
 
-1. **Validate the URL.** Structure checks, scheme allow-list, credential rejection,
+1. **Validate the URL** — structure checks, scheme allow-list, credential rejection,
    hostname normalisation, DNS resolution and private/reserved IP blocking. Redirect
    targets are re-validated on every hop.
-2. **Fetch the page.** A browser-like User-Agent is used (some sites return Cloudflare
-   403 to generic library agents). Content type, byte size and redirect count are
-   bounded.
-3. **Extract evidence.** BeautifulSoup with `lxml` (fallback `html.parser`) extracts
+2. **Fetch the page** — a browser-like User-Agent avoids common Cloudflare blocks;
+   content type, byte size and redirect count are bounded.
+3. **Extract evidence** — BeautifulSoup with `lxml` (fallback `html.parser`) pulls
    title, meta description, canonical URL, Open Graph data, JSON-LD, headings,
-   navigation link labels, image alt text and the main visible text. Scripts and
-   styles are removed before text extraction.
-4. **Build a compact prompt.** The extractor output is truncated to
-   `MAX_INPUT_CHARS` and sent with a strict JSON schema and a system prompt that
-   forbids invented search volumes.
-5. **Call the LLM.** The primary provider is called first. If the provider rejects
-   the schema or returns invalid JSON, the service can repair once (configurable)
-   and then try the configured fallback provider/model.
-6. **Validate and normalise.** The JSON is validated with Pydantic. The service
-   removes the submitted brand from its own competitor list, deduplicates lists,
-   trims SEO titles/meta, labels inferred services, and adds transparency warnings.
-7. **Cache and return.** Successful responses are cached for `CACHE_TTL_SECONDS`
-   (SQLite locally, `/tmp` on Vercel). The response includes extraction metadata,
-   token counts, estimated cost, latency, fallback/repair flags and warnings.
+   navigation labels, image alt text and main visible text. Scripts and styles are
+   stripped.
+4. **Build a compact prompt** — extraction output is truncated to `MAX_INPUT_CHARS` and
+   sent with a strict JSON schema and a system prompt that forbids invented volumes.
+5. **Call the LLM** — the primary provider runs first; on a schema rejection or invalid
+   JSON the service can repair once, then try the configured fallback provider/model.
+6. **Validate and normalise** — Pydantic validation, own-brand removal from competitors,
+   de-duplication, SEO trimming, inferred-service labelling and transparency warnings.
+7. **Cache and return** — responses are cached for `CACHE_TTL_SECONDS` (SQLite locally,
+   `/tmp` on Vercel) and include extraction metadata, tokens, cost, latency and flags.
 
 ### Provider adapters
 
@@ -288,56 +264,42 @@ Implemented in `app/services/llm_service.py`:
 - Native Gemini (`responseMimeType=application/json` + schema).
 - Native Anthropic Messages API with tool-style structured output.
 
-The active provider is selected with `LLM_PROVIDER`. Only Groq was live-tested for
-this submission because it was the only key available; the other adapters are
+Only Groq was live-tested because it was the only key available; the other adapters are
 implemented but untested here.
 
 ---
 
 ## LLM research and cost
 
-See [`docs/LLM_RESEARCH.md`](docs/LLM_RESEARCH.md) for the full comparison, sources,
-measured latency, token budget and the final provider choice.
+Full comparison, sources and measured latency: [`docs/LLM_RESEARCH.md`](docs/LLM_RESEARCH.md).
 
-Summary:
+| Provider / model | Input $/1M | Output $/1M | Structured JSON | Notes |
+| --- | ---: | ---: | --- | --- |
+| Groq `openai/gpt-oss-120b` | 0.15 | 0.60 | strict schema | **Primary**; free tier observed 8k TPM |
+| Groq `openai/gpt-oss-20b` | 0.075 | 0.30 | strict schema | **Fallback** |
+| Gemini 3.5 Flash-Lite | 0.30 | 2.50 | JSON schema | Strong production alternative; no key |
+| Anthropic Claude Haiku 5.5 | 0.10 | 0.50 | JSON schema | Strong quality/cost alternative; no key |
+| OpenAI GPT-6 Luna | 0.10 | 0.50 | Structured Outputs | No key |
+| DeepSeek Flash | 0.15 | 0.60 | JSON mode | Off-peak pricing; no key |
 
-| Provider / model | Input $/1M | Output $/1M | Context | Structured JSON | Notes |
-| --- | ---: | ---: | ---: | --- | --- |
-| Groq `openai/gpt-oss-120b` | 0.15 | 0.60 | 131,072 | strict schema | Primary; ~500 tok/s; free tier observed 8k TPM |
-| Groq `openai/gpt-oss-20b` | 0.075 | 0.30 | 131,072 | strict schema | Fallback; ~1,000 tok/s |
-| Groq `qwen/qwen3.8-27b` | 0.80 | 4.00 | 131,072 | JSON mode | Rejected as fallback: 1,000 output-token/min limit observed |
-| Gemini 3.5 Flash-Lite | 0.30 | 2.50 | 1,048,576 | JSON schema | Strong production alternative; no key available |
-| Anthropic Claude Haiku 5.5 | 0.10 | 0.50 | 1,000,000 | JSON schema | Strong quality/cost alternative; no key available |
-| OpenAI GPT-6 Luna | 0.10 | 0.50 | 1,050,000 | Structured Outputs | No key available |
-| DeepSeek Flash | 0.15 | 0.60 | 1,000,000 | JSON mode | Off-peak pricing; no key available |
-
-Prices are list prices verified on 2026-11-23 and can change. The live Groq run used
+Prices are list prices verified on 2026-11-23 and may change. The live Groq run used
 6,588 tokens for a 318-word page and estimated **$0.00238** per analysis.
 
-### Token budget
-
-Groq's free tier was observed at **8,000 tokens/minute** for `gpt-oss-120b`. A request
-counts prompt tokens plus `max_tokens`, so the defaults are deliberately bounded:
-
-- `MAX_INPUT_CHARS=6500` (roughly 2,000–2,500 tokens of page context)
-- `LLM_MAX_OUTPUT_TOKENS=3500`
-- system prompt and schema add roughly 1,000–1,500 tokens
-
-The observed request was 3,495 input + 3,093 output = **6,588 tokens**, leaving
-headroom under 8,000. If you increase `MAX_INPUT_CHARS` or `LLM_MAX_OUTPUT_TOKENS`,
-increase the Groq tier or expect 429s.
+**Token budget.** Groq's free tier was observed at **8,000 tokens/minute** for
+`gpt-oss-120b`, and a request counts prompt tokens plus `max_tokens`. Defaults stay
+under that: `MAX_INPUT_CHARS=6500`, `LLM_MAX_OUTPUT_TOKENS=3500`. Raising either requires
+a larger tier or will trigger 429s.
 
 ---
 
 ## Configuration
 
-Copy `.env.example` to `.env`. The most important values:
+Copy `.env.example` to `.env`. Key values:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `LLM_PROVIDER` | `groq` | `groq`, `openai`, `gemini`, `anthropic`, `deepseek`, `openrouter`, `ollama` |
 | `LLM_MODEL` | `openai/gpt-oss-120b` | Primary model |
-| `LLM_FALLBACK_PROVIDER` | `groq` | Optional fallback |
 | `LLM_FALLBACK_MODEL` | `openai/gpt-oss-20b` | Optional fallback model |
 | `GROQ_API_KEY` | empty | Groq API key |
 | `LLM_MAX_OUTPUT_TOKENS` | `3500` | Output cap; counts toward provider TPM |
@@ -346,7 +308,7 @@ Copy `.env.example` to `.env`. The most important values:
 | `FETCH_TIMEOUT_SECONDS` | `15` | Website fetch timeout |
 | `MAX_PAGE_BYTES` | `2000000` | Download limit |
 | `MAX_REDIRECTS` | `5` | Redirect limit |
-| `RATE_LIMIT_PER_HOUR` | `60` | Per-IP limit (in-process) |
+| `RATE_LIMIT_PER_HOUR` | `60` | Per-IP sliding window (in-process) |
 | `CACHE_ENABLED` | `true` | SQLite/TTL response cache |
 | `CACHE_TTL_SECONDS` | `86400` | Cache lifetime |
 | `ALLOW_PRIVATE_HOSTS` | `false` | Keep false in production |
@@ -365,14 +327,16 @@ pytest -q
 
 The suite covers URL validation/SSRF, HTML extraction, JSON parsing and validation,
 competitor normalisation, cache TTL, the API success path, invalid URLs, website
-failures, LLM failures, rate limiting and health/docs endpoints. Tests mock the LLM
-and never call a provider.
+failures, LLM failures, rate limiting and health/docs endpoints. Tests mock the LLM and
+never call a provider.
 
-Current result: **41 passed**.
+Current result: **42 passed**, Ruff clean.
 
 ---
 
-## Docker
+## Deployment
+
+**Docker**
 
 ```powershell
 docker build -t ai-link-analysis .
@@ -381,12 +345,7 @@ docker run --rm -p 4000:4000 --env-file .env ai-link-analysis
 
 The image runs as a non-root user and exposes a `/health` check.
 
----
-
-## Deploy to Vercel
-
-The repository includes a root `main.py` so Vercel's Python framework preset can
-serve the ASGI app directly.
+**Vercel** — the repo has a root `main.py` entrypoint for the Python framework preset.
 
 ```powershell
 npm install -g vercel
@@ -394,25 +353,10 @@ vercel login
 vercel --prod --yes
 ```
 
-Set the environment variables in the Vercel project (or via `vercel env add`):
-
-```text
-LLM_PROVIDER=groq
-LLM_MODEL=openai/gpt-oss-120b
-LLM_FALLBACK_PROVIDER=groq
-LLM_FALLBACK_MODEL=openai/gpt-oss-20b
-GROQ_API_KEY=...
-MAX_INPUT_CHARS=6500
-LLM_MAX_OUTPUT_TOKENS=3500
-CACHE_ENABLED=true
-RATE_LIMIT_PER_HOUR=60
-```
-
-Vercel Hobby has a 300-second function limit; this API normally returns in under
-15 seconds. The cache uses `/tmp` when the `VERCEL` environment variable is set.
-
-After deployment, the web app is served at `/`, Swagger UI at `/docs`, and the
-analysis endpoint at `POST /link-analysis`. The current production alias is
+Set `LLM_PROVIDER`, `LLM_MODEL`, `LLM_FALLBACK_MODEL`, `GROQ_API_KEY`,
+`MAX_INPUT_CHARS`, `LLM_MAX_OUTPUT_TOKENS`, `CACHE_ENABLED` and `RATE_LIMIT_PER_HOUR` in
+the project (or via `vercel env add`). The function has a 300s ceiling and normally
+returns in under 15s; the cache uses `/tmp` when `VERCEL` is set. Production alias:
 https://ai-link-analysis-nine.vercel.app.
 
 ---
@@ -426,8 +370,7 @@ ai-link-analysis/
 │   ├── config.py                # settings and pricing table
 │   ├── schemas.py               # request/response and LLM payload models
 │   ├── exceptions.py            # AppError
-│   ├── static/
-│   │   └── index.html           # LinkLens single-page frontend (no build step)
+│   ├── static/index.html        # LinkLens single-page frontend (no build step)
 │   ├── services/
 │   │   ├── analysis_service.py  # orchestration and caching
 │   │   ├── website_extractor.py # fetching, parsing, SSRF-safe redirects
@@ -439,25 +382,12 @@ ai-link-analysis/
 │       ├── validators.py        # URL + SSRF validation
 │       ├── text.py
 │       └── logging.py
-├── docs/
-│   ├── frontend.png             # UI hero screenshot
-│   ├── frontend-report.png      # rendered analysis report
-│   ├── swagger-ui.png
-│   ├── LLM_RESEARCH.md
-│   └── sample-run.txt
-├── samples/
-│   ├── request.json
-│   ├── response.json
-│   └── error.json
-├── scripts/
-│   └── analyze_url.py
+├── docs/                        # screenshots, LLM research, sample run
+├── samples/                     # request.json, response.json, error.json
+├── scripts/analyze_url.py       # CLI helper
 ├── tests/
-├── .env.example
-├── Dockerfile
 ├── main.py                      # Vercel entrypoint
-├── requirements.txt
-├── requirements-dev.txt
-└── vercel.json
+├── Dockerfile · vercel.json · requirements*.txt · .env.example
 ```
 
 ---
@@ -465,50 +395,28 @@ ai-link-analysis/
 ## Security and responsible AI
 
 - **SSRF protection:** only `http`/`https`, no credentials, no localhost/private/
-  reserved IPs, DNS resolution checked, and every redirect re-validated.
+  reserved IPs, DNS resolution checked, every redirect re-validated.
 - **No secrets in logs:** API keys are never logged; `.env` is gitignored.
-- **Rate limiting:** per-IP sliding window; configurable.
-- **Input limits:** URL length, page bytes, redirect count, prompt context and
-  output tokens are all bounded.
-- **No invented search volumes:** the schema has no volume field and the prompt
-  forbids volume claims.
-- **Competitor data is labelled:** competitors are AI-generated suggestions, not
-  verified market data. If the model cannot identify three competitors, the response
-  includes clearly labelled `Unverified competitor candidate` placeholders and a
-  warning.
+- **Rate limiting:** per-IP sliding window, configurable.
+- **Input limits:** URL length, page bytes, redirects, prompt context and output tokens
+  are all bounded.
+- **No invented search volumes:** the schema has no volume field and the prompt forbids
+  volume claims.
+- **Competitor data is labelled:** AI-generated suggestions, not verified market data;
+  placeholders and warnings appear when confidence is low.
 - **Inferred services are labelled:** `source` is `website` or `inferred`.
-- **Transparency metadata:** token usage, estimated cost, latency, fallback and
-  repair attempts are returned in every response.
+- **Transparency metadata:** tokens, cost, latency, fallback and repair attempts are
+  returned in every response.
 
 ### Known limitations
 
 - The free Groq tier is rate-limited (observed 8,000 TPM); high traffic needs a paid
-  tier or a different provider.
-- Only Groq was live-tested. Gemini/OpenAI/Anthropic/DeepSeek adapters are implemented
-  but need their own keys and a smoke test.
-- Some sites are JavaScript-rendered or bot-blocked; extraction can return little
-  text. The response warns when this happens.
+  tier or another provider.
+- Only Groq was live-tested; the other adapters need their own keys and a smoke test.
+- JavaScript-rendered or bot-blocked sites can yield little text; the response warns.
 - Competitor names and comparisons are model suggestions and must be verified before
   commercial use.
-- Pricing and model availability change; check the provider docs before production.
-
----
-
-## Submission checklist
-
-- [x] Public GitHub repository
-- [x] `POST /link-analysis` on port 4000 locally
-- [x] Five structured sections
-- [x] Groq structured output verified end-to-end
-- [x] SSRF protection and URL validation
-- [x] Tests and lint passing
-- [x] README, samples and LLM research
-- [x] Docker and Vercel deployment files
-- [x] Live demo deployed at https://ai-link-analysis-nine.vercel.app
-- [x] Web UI served at `/` and verified in production (hero, live analysis, report, error state)
-- [x] Submission email drafted with demo, GitHub, contact details and discussion window
-- [ ] Submission email sent to `hr@chivoxai.com`
-- [x] Dxora LinkedIn and CREST Instagram followed
+- Pricing and model availability change; check provider docs before production.
 
 ---
 
